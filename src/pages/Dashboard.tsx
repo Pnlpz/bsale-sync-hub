@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, ShoppingCart, AlertTriangle, TrendingUp } from 'lucide-react';
+import BsaleConnectionTest from '@/components/BsaleConnectionTest';
 
 const Dashboard = () => {
   const { profile } = useAuth();
@@ -122,6 +123,12 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Bsale Integration Test */}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">Integración Bsale</h2>
+        <BsaleConnectionTest />
       </div>
     </div>
   );
