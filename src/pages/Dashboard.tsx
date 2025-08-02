@@ -1,10 +1,21 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Package, ShoppingCart, AlertTriangle, TrendingUp } from 'lucide-react';
 import BsaleConnectionTest from '@/components/BsaleConnectionTest';
+import { useFilteredProducts, useCurrentUserMarca, useMarca } from '@/hooks/useMarca';
 
 const Dashboard = () => {
   const { profile } = useAuth();
+
+  // Get user's marca for proveedor users
+  const { data: userMarcaId } = useCurrentUserMarca();
+  const { data: userMarca } = useMarca(userMarcaId || '');
+
+  // Get filtered products based on user role
+  const { data: products } = useFilteredProducts({
+    marca_id: profile?.role === 'proveedor' ? userMarcaId : undefined,
+  });
 
   const getDashboardContent = () => {
     switch (profile?.role) {
@@ -20,13 +31,16 @@ const Dashboard = () => {
           ]
         };
       case 'proveedor':
+        const productCount = products?.length || 0;
+        const lowStockCount = products?.filter(p => p.stock < 10).length || 0;
+
         return {
           title: 'Panel de Proveedor',
-          description: 'Gestiona tus productos y ventas',
+          description: `Gestiona tus productos y ventas${userMarca ? ` - ${userMarca.name}` : ''}`,
           stats: [
-            { title: 'Mis Productos', value: '156', icon: Package, color: 'text-blue-600' },
+            { title: 'Mis Productos', value: productCount.toString(), icon: Package, color: 'text-blue-600' },
             { title: 'Ventas del Mes', value: '$12,340', icon: ShoppingCart, color: 'text-green-600' },
-            { title: 'Stock Bajo', value: '5', icon: AlertTriangle, color: 'text-orange-600' },
+            { title: 'Stock Bajo', value: lowStockCount.toString(), icon: AlertTriangle, color: 'text-orange-600' },
             { title: 'Tiendas Activas', value: '8', icon: TrendingUp, color: 'text-purple-600' },
           ]
         };
@@ -55,7 +69,14 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{dashboardData.title}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">{dashboardData.title}</h1>
+          {profile?.role === 'proveedor' && userMarca && (
+            <Badge variant="outline" className="text-sm">
+              {userMarca.name}
+            </Badge>
+          )}
+        </div>
         <p className="text-muted-foreground">{dashboardData.description}</p>
       </div>
 

@@ -14,11 +14,15 @@ import {
   useCreateProductInBsale 
 } from '@/hooks/useBsale';
 import { useAuth } from '@/hooks/useAuth';
+import { useCurrentUserMarca } from '@/hooks/useMarca';
 
 const BsaleIntegration: React.FC = () => {
   const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
+
+  // Get user's marca for proveedor users
+  const { data: userMarcaId } = useCurrentUserMarca();
 
   // Hooks
   const { data: bsaleProducts, isLoading: loadingProducts } = useBsaleProducts();

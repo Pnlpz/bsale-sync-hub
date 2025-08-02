@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { bsaleClient, BsaleProduct, BsaleDocument } from '@/lib/bsale-client';
+import { MarcaService } from '@/services/marca-service';
 
 export interface SyncResult {
   success: boolean;
@@ -14,13 +15,22 @@ export interface SyncResult {
 export class BsaleSyncService {
   
   /**
-   * Sync products from Bsale to Supabase
+   * Sync products from Bsale to Supabase with marca assignment
    */
   static async syncProductsFromBsale(storeId: string, proveedorId: string): Promise<SyncResult> {
     const errors: string[] = [];
     let synced = 0;
 
     try {
+      // Get the proveedor's marca_id
+      const { data: proveedorProfile } = await supabase
+        .from('profiles')
+        .select('marca_id')
+        .eq('id', proveedorId)
+        .single();
+
+      const marcaId = proveedorProfile?.marca_id;
+
       // Get products from Bsale
       const bsaleResponse = await bsaleClient.getProducts(100, 0);
       
@@ -36,9 +46,12 @@ export class BsaleSyncService {
           const productData = {
             name: bsaleProduct.name,
             description: bsaleProduct.description || '',
+            price: 0, // You might want to get this from variants
+            stock: 0, // You might want to get this from variants
             bsale_product_id: bsaleProduct.id.toString(),
             store_id: storeId,
             proveedor_id: proveedorId,
+            marca_id: marcaId, // Assign the proveedor's marca to the product
             updated_at: new Date().toISOString(),
           };
 

@@ -5,15 +5,31 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, Search, Plus, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Package, Search, Plus, RefreshCw, AlertTriangle, Filter } from 'lucide-react';
 import { useBsaleProducts, useSyncProductsFromBsale } from '@/hooks/useBsale';
+import { useFilteredProducts, useMarcas, useCurrentUserMarca } from '@/hooks/useMarca';
 import BsaleIntegration from '@/components/BsaleIntegration';
 
 const Inventory = () => {
   const { profile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const { data: bsaleProducts, isLoading } = useBsaleProducts();
+  const [selectedMarca, setSelectedMarca] = useState<string>('');
+
+  // Get user's marca for proveedor users
+  const { data: userMarcaId } = useCurrentUserMarca();
+
+  // Get available marcas (for admin and locatario users)
+  const { data: marcas } = useMarcas();
+
+  // Get filtered products from Supabase based on user role and marca
+  const { data: localProducts, isLoading: loadingLocalProducts } = useFilteredProducts({
+    search_term: searchTerm,
+    marca_id: selectedMarca || (profile?.role === 'proveedor' ? userMarcaId : undefined),
+  });
+
+  // Get Bsale products (for sync purposes)
+  const { data: bsaleProducts, isLoading: loadingBsaleProducts } = useBsaleProducts();
   const syncProducts = useSyncProductsFromBsale();
 
   const handleSync = () => {
@@ -25,9 +41,13 @@ const Inventory = () => {
     }
   };
 
-  const filteredProducts = bsaleProducts?.items?.filter(product =>
+  // Filter Bsale products for display (used in Bsale tab)
+  const filteredBsaleProducts = bsaleProducts?.items?.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
+
+  // Determine which products to show based on current tab
+  const isLoading = loadingLocalProducts || loadingBsaleProducts;
 
   return (
     <div className="space-y-6">
@@ -63,48 +83,90 @@ const Inventory = () => {
               <CardTitle className="flex items-center">
                 <Package className="h-5 w-5 mr-2" />
                 Lista de Productos
+                {profile?.role === 'proveedor' && userMarcaId && (
+                  <Badge variant="outline" className="ml-2">
+                    Filtrado por marca
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription>
                 Productos disponibles en tu inventario
+                {profile?.role === 'proveedor' ? ' (solo tu marca)' : ''}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-2 mb-4">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar productos..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="max-w-sm"
-                />
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar productos..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+
+                {/* Marca filter for admin and locatario users */}
+                {(profile?.role === 'admin' || profile?.role === 'locatario') && marcas && marcas.length > 0 && (
+                  <Select value={selectedMarca} onValueChange={setSelectedMarca}>
+                    <SelectTrigger className="w-48">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Todas las marcas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Todas las marcas</SelectItem>
+                      {marcas.map((marca) => (
+                        <SelectItem key={marca.id} value={marca.id}>
+                          {marca.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                <Button onClick={handleSync} disabled={syncProducts.isPending}>
+                  {syncProducts.isPending ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Sincronizar
+                </Button>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar
+                </Button>
               </div>
 
-              {isLoading ? (
+              {loadingLocalProducts ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                   <p className="mt-2 text-muted-foreground">Cargando productos...</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredProducts.length > 0 ? (
-                    filteredProducts.map((product) => (
+                  {localProducts && localProducts.length > 0 ? (
+                    localProducts.map((product) => (
                       <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex-1">
                           <h3 className="font-semibold">{product.name}</h3>
                           <p className="text-sm text-muted-foreground">
-                            ID: {product.id} | Clasificación: {product.classification}
+                            Precio: ${product.price} | Stock: {product.stock}
+                            {product.marca && ` | Marca: ${product.marca.name}`}
                           </p>
                           {product.description && (
                             <p className="text-sm mt-1">{product.description}</p>
                           )}
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Badge variant={product.state === 0 ? "default" : "secondary"}>
-                            {product.state === 0 ? "Activo" : "Inactivo"}
+                          <Badge variant={product.stock > 0 ? "default" : "destructive"}>
+                            {product.stock > 0 ? "En Stock" : "Sin Stock"}
                           </Badge>
-                          <Badge variant={product.stockControl ? "default" : "outline"}>
-                            {product.stockControl ? "Con Stock" : "Sin Stock"}
-                          </Badge>
+                          {product.marca && (
+                            <Badge variant="outline">
+                              {product.marca.name}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     ))
@@ -112,7 +174,12 @@ const Inventory = () => {
                     <div className="text-center py-8">
                       <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">
-                        {searchTerm ? 'No se encontraron productos con ese término' : 'No hay productos disponibles'}
+                        {searchTerm || selectedMarca
+                          ? 'No se encontraron productos con los filtros aplicados'
+                          : 'No hay productos locales disponibles'}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Sincroniza productos desde Bsale para comenzar
                       </p>
                     </div>
                   )}

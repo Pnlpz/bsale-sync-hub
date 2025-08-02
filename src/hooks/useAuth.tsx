@@ -11,6 +11,7 @@ interface Profile {
   role: 'proveedor' | 'locatario' | 'admin';
   store_id?: string;
   proveedor_id?: string;
+  marca_id?: string;
 }
 
 interface AuthContextType {

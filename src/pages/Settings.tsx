@@ -8,8 +8,9 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Settings as SettingsIcon, User, Bell, Shield, Database, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, User, Bell, Shield, Database, RefreshCw, Tag } from 'lucide-react';
 import BsaleConnectionTest from '@/components/BsaleConnectionTest';
+import MarcaManagement from '@/components/MarcaManagement';
 
 const Settings = () => {
   const { profile } = useAuth();
@@ -49,11 +50,14 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="profile">Perfil</TabsTrigger>
           <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
           <TabsTrigger value="bsale">Bsale</TabsTrigger>
           <TabsTrigger value="sync">Sincronización</TabsTrigger>
+          {profile?.role === 'admin' && (
+            <TabsTrigger value="marcas">Marcas</TabsTrigger>
+          )}
           <TabsTrigger value="security">Seguridad</TabsTrigger>
         </TabsList>
 
@@ -359,6 +363,12 @@ const Settings = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {profile?.role === 'admin' && (
+          <TabsContent value="marcas" className="space-y-4">
+            <MarcaManagement />
+          </TabsContent>
+        )}
 
         <TabsContent value="security" className="space-y-4">
           <Card>
