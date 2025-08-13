@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { UserStoreAccess, StoreContext } from '@/types/invitation';
 
 interface Profile {
   id: string;
@@ -19,9 +20,12 @@ interface AuthContextType {
   profile: Profile | null;
   session: Session | null;
   loading: boolean;
+  storeContext: StoreContext;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  switchStore: (storeId: string) => void;
+  refreshStoreContext: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +35,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [storeContext, setStoreContext] = useState<StoreContext>({
+    accessible_stores: [],
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -41,23 +48,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
+          // Fetch user profile and store context
           setTimeout(async () => {
             const { data: profileData, error } = await supabase
               .from('profiles')
               .select('*')
               .eq('user_id', session.user.id)
               .maybeSingle();
-            
+
             if (error) {
               console.error('Error fetching profile:', error);
             } else {
               setProfile(profileData);
+              // Fetch accessible stores
+              await fetchStoreContext();
             }
             setLoading(false);
           }, 0);
         } else {
           setProfile(null);
+          setStoreContext({ accessible_stores: [] });
           setLoading(false);
         }
       }
@@ -74,6 +84,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Fetch store context for the current user
+  const fetchStoreContext = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase.rpc('get_user_accessible_stores', {
+        user_id: user.id,
+      });
+
+      if (error) {
+        console.error('Error fetching accessible stores:', error);
+        return;
+      }
+
+      const accessibleStores: UserStoreAccess[] = data || [];
+      const currentStoreId = localStorage.getItem('current_store_id');
+
+      // Validate current store is still accessible
+      const isCurrentStoreValid = currentStoreId &&
+        accessibleStores.some(store => store.store_id === currentStoreId);
+
+      const newContext: StoreContext = {
+        accessible_stores: accessibleStores,
+        current_store_id: isCurrentStoreValid ? currentStoreId : undefined,
+        default_store_id: accessibleStores[0]?.store_id,
+      };
+
+      // If no current store is set but user has access to stores, set the first one
+      if (!newContext.current_store_id && newContext.default_store_id) {
+        newContext.current_store_id = newContext.default_store_id;
+        localStorage.setItem('current_store_id', newContext.default_store_id);
+      }
+
+      setStoreContext(newContext);
+    } catch (error) {
+      console.error('Error fetching store context:', error);
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -130,7 +179,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "No se pudo cerrar sesión",
         variant: "destructive",
       });
+    } else {
+      // Clear store context on sign out
+      localStorage.removeItem('current_store_id');
+      setStoreContext({ accessible_stores: [] });
     }
+  };
+
+  // Switch to a different store
+  const switchStore = (storeId: string) => {
+    const isValidStore = storeContext.accessible_stores.some(
+      store => store.store_id === storeId
+    );
+
+    if (!isValidStore) {
+      toast({
+        title: "Error",
+        description: "No tienes acceso a esta tienda",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    localStorage.setItem('current_store_id', storeId);
+    setStoreContext(prev => ({
+      ...prev,
+      current_store_id: storeId,
+    }));
+
+    toast({
+      title: "Tienda cambiada",
+      description: `Ahora estás viendo: ${storeContext.accessible_stores.find(s => s.store_id === storeId)?.store_name}`,
+    });
+  };
+
+  // Refresh store context
+  const refreshStoreContext = async () => {
+    await fetchStoreContext();
   };
 
   return (
@@ -139,9 +224,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       profile,
       session,
       loading,
+      storeContext,
       signIn,
       signUp,
       signOut,
+      switchStore,
+      refreshStoreContext,
     }}>
       {children}
     </AuthContext.Provider>

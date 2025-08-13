@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { bsaleClient, BsaleProduct, BsaleDocument } from '@/lib/bsale-client';
+import { bsaleClient, BsaleProduct, BsaleDocument, BsaleDocumentDetail } from '@/lib/bsale-client';
 import { MarcaService } from '@/services/marca-service';
 
 export interface SyncResult {
@@ -102,73 +102,127 @@ export class BsaleSyncService {
     const errors: string[] = [];
     let synced = 0;
 
+    console.log('Starting sales sync from Bsale:', { storeId, proveedorId });
+
     try {
       // Get documents (sales) from Bsale
       const bsaleResponse = await bsaleClient.getDocuments(100, 0);
-      
+      console.log('Bsale documents response:', bsaleResponse);
+
+      if (!bsaleResponse.items || bsaleResponse.items.length === 0) {
+        return {
+          success: true,
+          message: 'No hay documentos nuevos para sincronizar.',
+          synced: 0,
+          errors: [],
+        };
+      }
+
       for (const bsaleDocument of bsaleResponse.items) {
         try {
-          // Only process sales documents (you might need to filter by document type)
+          // Only process active sales documents
           if (bsaleDocument.state === 0) { // Active documents
-            
+
             // Check if sale already exists in Supabase
             const { data: existingSale } = await supabase
               .from('sales')
               .select('id')
               .eq('bsale_sale_id', bsaleDocument.id.toString())
-              .single();
-
-            // You'll need to get the product_id from your local database
-            // This is a simplified example - you might need to match products differently
-            const { data: product } = await supabase
-              .from('products')
-              .select('id')
               .eq('store_id', storeId)
-              .limit(1)
               .single();
 
-            if (!product) {
-              errors.push(`No product found for sale ${bsaleDocument.id}`);
+            // Skip if sale already exists
+            if (existingSale) {
               continue;
             }
 
-            const saleData = {
-              product_id: product.id,
-              store_id: storeId,
-              proveedor_id: proveedorId,
-              quantity: 1, // You'll need to get this from document details
-              total_amount: bsaleDocument.totalAmount,
-              sale_date: new Date(bsaleDocument.emissionDate * 1000).toISOString(),
-              bsale_sale_id: bsaleDocument.id.toString(),
-            };
+            // Get document details to find products
+            try {
+              const documentDetailsResponse = await bsaleClient.getDocumentDetails(bsaleDocument.id);
 
-            if (existingSale) {
-              // Update existing sale
-              const { error } = await supabase
-                .from('sales')
-                .update(saleData)
-                .eq('id', existingSale.id);
+              if (documentDetailsResponse && documentDetailsResponse.items && documentDetailsResponse.items.length > 0) {
+                // Process each product in the sale
+                for (const detail of documentDetailsResponse.items) {
+                  if (detail.variant && detail.variant.id) {
+                    // Find the product in our database by Bsale product ID
+                    const { data: product } = await supabase
+                      .from('products')
+                      .select('id, proveedor_id')
+                      .eq('bsale_product_id', detail.variant.id.toString())
+                      .eq('store_id', storeId)
+                      .single();
 
-              if (error) throw error;
-            } else {
-              // Create new sale
-              const { error } = await supabase
-                .from('sales')
-                .insert(saleData);
+                    if (product) {
+                      const saleData = {
+                        product_id: product.id,
+                        store_id: storeId,
+                        proveedor_id: product.proveedor_id, // Use the product's provider
+                        quantity: detail.quantity || 1,
+                        total_amount: detail.netUnitValue * detail.quantity,
+                        sale_date: new Date(bsaleDocument.emissionDate * 1000).toISOString(),
+                        bsale_sale_id: bsaleDocument.id.toString(),
+                      };
 
-              if (error) throw error;
+                      // Create new sale
+                      const { error } = await supabase
+                        .from('sales')
+                        .insert(saleData);
+
+                      if (error) {
+                        errors.push(`Error creating sale for product ${product.id}: ${error.message}`);
+                      } else {
+                        synced++;
+                      }
+                    } else {
+                      errors.push(`Product not found for Bsale variant ${detail.variant.id} in document ${bsaleDocument.id}`);
+                    }
+                  }
+                }
+              } else {
+                // Fallback: create a generic sale entry if no details available
+                const { data: anyProduct } = await supabase
+                  .from('products')
+                  .select('id, proveedor_id')
+                  .eq('store_id', storeId)
+                  .limit(1)
+                  .single();
+
+                if (anyProduct) {
+                  const saleData = {
+                    product_id: anyProduct.id,
+                    store_id: storeId,
+                    proveedor_id: anyProduct.proveedor_id,
+                    quantity: 1,
+                    total_amount: bsaleDocument.totalAmount,
+                    sale_date: new Date(bsaleDocument.emissionDate * 1000).toISOString(),
+                    bsale_sale_id: bsaleDocument.id.toString(),
+                  };
+
+                  const { error } = await supabase
+                    .from('sales')
+                    .insert(saleData);
+
+                  if (error) {
+                    errors.push(`Error creating generic sale for document ${bsaleDocument.id}: ${error.message}`);
+                  } else {
+                    synced++;
+                  }
+                } else {
+                  errors.push(`No products found in store ${storeId} for document ${bsaleDocument.id}`);
+                }
+              }
+            } catch (detailError) {
+              errors.push(`Error getting details for document ${bsaleDocument.id}: ${detailError.message}`);
             }
-
-            synced++;
           }
         } catch (error) {
-          errors.push(`Error syncing sale ${bsaleDocument.id}: ${error.message}`);
+          errors.push(`Error processing document ${bsaleDocument.id}: ${error.message}`);
         }
       }
 
       return {
         success: errors.length === 0,
-        message: `Sincronización de ventas completada. ${synced} ventas sincronizadas.`,
+        message: `Sincronización de ventas completada. ${synced} ventas sincronizadas.${errors.length > 0 ? ` ${errors.length} errores encontrados.` : ''}`,
         synced,
         errors,
       };

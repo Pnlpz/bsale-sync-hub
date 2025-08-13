@@ -14,6 +14,7 @@ import Users from "./pages/Users";
 import Stores from "./pages/Stores";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import InvitationAccept from "./pages/InvitationAccept";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/invitation/accept" element={<InvitationAccept />} />
             <Route path="/" element={
               <ProtectedRoute>
                 <Layout>

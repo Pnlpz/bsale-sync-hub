@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useStoreContext } from '@/hooks/useStoreContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Store, Search, Plus, MapPin, Users, Package } from 'lucide-react';
+import InvitationManagement from '@/components/InvitationManagement';
+import StoreProviderManagement from '@/components/StoreProviderManagement';
 
 const Stores = () => {
   const { profile } = useAuth();
+  const { currentStore, isLocatario, isAdmin } = useStoreContext();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Mock stores data
@@ -65,8 +69,8 @@ const Stores = () => {
   const totalUsers = mockStores.reduce((sum, store) => sum + store.userCount, 0);
   const totalProducts = mockStores.reduce((sum, store) => sum + store.productCount, 0);
 
-  // Only show this page to admin users
-  if (profile?.role !== 'admin') {
+  // Show different content based on user role
+  if (!isAdmin && !isLocatario) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="w-full max-w-md">
@@ -83,6 +87,78 @@ const Stores = () => {
     );
   }
 
+  // Locatario view - manage their own store
+  if (isLocatario && currentStore) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Mi Tienda</h1>
+            <p className="text-muted-foreground">
+              Gestiona tu tienda: {currentStore.store_name}
+            </p>
+          </div>
+        </div>
+
+        <Tabs defaultValue="invitations" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="invitations">Invitaciones</TabsTrigger>
+            <TabsTrigger value="providers">Proveedores</TabsTrigger>
+            <TabsTrigger value="settings">Configuración</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="invitations">
+            <InvitationManagement
+              storeId={currentStore.store_id}
+              storeName={currentStore.store_name}
+            />
+          </TabsContent>
+
+          <TabsContent value="providers">
+            <StoreProviderManagement
+              storeId={currentStore.store_id}
+              storeName={currentStore.store_name}
+            />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuración de la Tienda</CardTitle>
+                <CardDescription>
+                  Configuración y ajustes de tu tienda
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-medium">Información de la Tienda</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Nombre: {currentStore.store_name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      ID: {currentStore.store_id}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Conexión Bsale</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Configura tu conexión con Bsale para sincronizar productos y ventas
+                    </p>
+                    <Button className="mt-2" variant="outline">
+                      Configurar Bsale
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
+  // Admin view - manage all stores
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

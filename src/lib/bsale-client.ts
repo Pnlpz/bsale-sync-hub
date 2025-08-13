@@ -102,6 +102,25 @@ export interface BsaleDocument {
   };
 }
 
+export interface BsaleDocumentDetail {
+  id: number;
+  quantity: number;
+  netUnitValue: number;
+  totalUnitValue: number;
+  variant: {
+    id: number;
+    description: string;
+    unlimitedStock: boolean;
+    allowNegativeStock: boolean;
+    product: {
+      id: number;
+      name: string;
+      href: string;
+    };
+    href: string;
+  };
+}
+
 export interface BsaleClient {
   id: number;
   firstName: string;
@@ -200,6 +219,10 @@ class BsaleApiClient {
 
   async getDocument(id: number): Promise<BsaleDocument> {
     return this.makeRequest(`/documents/${id}.json`);
+  }
+
+  async getDocumentDetails(id: number): Promise<BsaleApiResponse<BsaleDocumentDetail>> {
+    return this.makeRequest(`/documents/${id}/details.json`);
   }
 
   async createDocument(documentData: any): Promise<BsaleDocument> {
