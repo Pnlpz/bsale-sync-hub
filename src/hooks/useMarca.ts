@@ -7,6 +7,7 @@ import { MarcaService } from '@/services/marca-service';
 import { CreateMarcaData, UpdateMarcaData, ProductFilterOptions } from '@/types/marca';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useStoreContext } from '@/hooks/useStoreContext';
 
 // Query keys
 export const marcaKeys = {
@@ -17,7 +18,7 @@ export const marcaKeys = {
   detail: (id: string) => [...marcaKeys.details(), id] as const,
   stats: () => [...marcaKeys.all, 'stats'] as const,
   userMarca: () => [...marcaKeys.all, 'user-marca'] as const,
-  filteredProducts: (options: ProductFilterOptions) => ['products', 'filtered', options] as const,
+  filteredProducts: (storeId: string, options: ProductFilterOptions) => ['products', 'filtered', storeId, options] as const,
 };
 
 /**
@@ -73,15 +74,17 @@ export const useCurrentUserMarca = () => {
  */
 export const useFilteredProducts = (options: ProductFilterOptions = {}) => {
   const { profile } = useAuth();
-  
-  // For proveedor users, automatically filter by their marca
-  const finalOptions = profile?.role === 'proveedor' && profile.marca_id
-    ? { ...options, marca_id: profile.marca_id }
-    : options;
+  const { currentStoreId, currentStoreMarca, isProvider } = useStoreContext();
+
+  // For proveedor users, automatically filter by their marca in current store
+  const finalOptions = isProvider && currentStoreMarca
+    ? { ...options, marca_id: currentStoreMarca, store_id: currentStoreId }
+    : { ...options, store_id: currentStoreId };
 
   return useQuery({
-    queryKey: marcaKeys.filteredProducts(finalOptions),
+    queryKey: marcaKeys.filteredProducts(currentStoreId || '', finalOptions),
     queryFn: () => MarcaService.getFilteredProducts(finalOptions),
+    enabled: !!currentStoreId,
     staleTime: 2 * 60 * 1000,
   });
 };

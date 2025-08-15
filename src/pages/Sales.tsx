@@ -1,25 +1,42 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useStoreContext } from '@/hooks/useStoreContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Search, Plus, TrendingUp, Calendar, DollarSign } from 'lucide-react';
+import { ShoppingCart, Search, Plus, TrendingUp, Calendar, DollarSign, RefreshCw } from 'lucide-react';
 import { useBsaleDocuments, useSyncSalesFromBsale } from '@/hooks/useBsale';
+import { StoreContextInfo } from '@/components/StoreSelector';
 
 const Sales = () => {
   const { profile } = useAuth();
+  const { currentStoreId, currentStore, isProvider } = useStoreContext();
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const { data: bsaleDocuments, isLoading } = useBsaleDocuments();
   const syncSales = useSyncSalesFromBsale();
 
   const handleSyncSales = () => {
-    if (profile?.store_id && profile?.proveedor_id) {
+    // Use current store context if available, otherwise fall back to profile store_id
+    const storeId = currentStoreId || profile?.store_id;
+    const proveedorId = profile?.id; // Use profile ID as provider ID
+
+    console.log('Sales sync initiated:', { storeId, proveedorId, profile });
+
+    if (storeId && proveedorId) {
       syncSales.mutate({
-        storeId: profile.store_id,
-        proveedorId: profile.proveedor_id,
+        storeId,
+        proveedorId,
+      });
+    } else {
+      console.error('Missing store ID or provider ID for sales sync', {
+        storeId,
+        proveedorId,
+        currentStoreId,
+        profileStoreId: profile?.store_id,
+        profile
       });
     }
   };
@@ -46,16 +63,23 @@ const Sales = () => {
 
   return (
     <div className="space-y-6">
+      {/* Store Context Info for Providers */}
+      {isProvider && <StoreContextInfo />}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Ventas</h1>
           <p className="text-muted-foreground">
             Gestiona y monitorea tus ventas
+            {currentStore && ` - ${currentStore.store_name}`}
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button onClick={handleSyncSales} disabled={syncSales.isPending}>
-            <TrendingUp className="h-4 w-4 mr-2" />
+          <Button
+            onClick={handleSyncSales}
+            disabled={syncSales.isPending || (!currentStoreId && !profile?.store_id)}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
             {syncSales.isPending ? 'Sincronizando...' : 'Sincronizar Ventas'}
           </Button>
           <Button>

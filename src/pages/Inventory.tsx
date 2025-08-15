@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useStoreContext } from '@/hooks/useStoreContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +11,11 @@ import { Package, Search, Plus, RefreshCw, AlertTriangle, Filter } from 'lucide-
 import { useBsaleProducts, useSyncProductsFromBsale } from '@/hooks/useBsale';
 import { useFilteredProducts, useMarcas, useCurrentUserMarca } from '@/hooks/useMarca';
 import BsaleIntegration from '@/components/BsaleIntegration';
+import { StoreContextInfo } from '@/components/StoreSelector';
 
 const Inventory = () => {
   const { profile } = useAuth();
+  const { isProvider } = useStoreContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMarca, setSelectedMarca] = useState<string>('');
 
@@ -22,11 +25,8 @@ const Inventory = () => {
   // Get available marcas (for admin and locatario users)
   const { data: marcas } = useMarcas();
 
-  // Get filtered products from Supabase based on user role and marca
-  const { data: localProducts, isLoading: loadingLocalProducts } = useFilteredProducts({
-    search_term: searchTerm,
-    marca_id: selectedMarca || (profile?.role === 'proveedor' ? userMarcaId : undefined),
-  });
+  // Get filtered products from Supabase based on user role, marca, and current store
+  const { data: localProducts, isLoading: loadingLocalProducts } = useFilteredProducts();
 
   // Get Bsale products (for sync purposes)
   const { data: bsaleProducts, isLoading: loadingBsaleProducts } = useBsaleProducts();
@@ -51,6 +51,9 @@ const Inventory = () => {
 
   return (
     <div className="space-y-6">
+      {/* Store Context Info for Providers */}
+      {isProvider && <StoreContextInfo />}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Inventario</h1>
