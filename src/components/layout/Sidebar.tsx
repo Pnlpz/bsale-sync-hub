@@ -2,15 +2,16 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  AlertTriangle, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  AlertTriangle,
+  Settings,
   LogOut,
   Users,
-  Store
+  Store,
+  Shield
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -26,6 +27,7 @@ const Sidebar = () => {
     ];
 
     if (profile?.role === 'admin') {
+      baseItems.splice(1, 0, { icon: Shield, label: 'Panel Admin', path: '/admin' });
       baseItems.push(
         { icon: Users, label: 'Usuarios', path: '/users' },
         { icon: Store, label: 'Tiendas', path: '/stores' }

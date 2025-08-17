@@ -2,14 +2,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useStoreContext } from '@/hooks/useStoreContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Package, ShoppingCart, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Package, ShoppingCart, AlertTriangle, TrendingUp, UserPlus, Users } from 'lucide-react';
 import BsaleConnectionTest from '@/components/BsaleConnectionTest';
 import StoreSelector, { StoreContextInfo } from '@/components/StoreSelector';
+import InviteProviderDialog, { CompactInviteButton } from '@/components/InviteProviderDialog';
 import { useFilteredProducts, useCurrentUserMarca, useMarca } from '@/hooks/useMarca';
 
 const Dashboard = () => {
   const { profile } = useAuth();
-  const { currentStore, isProvider, hasMultipleStores } = useStoreContext();
+  const { currentStore, isProvider, hasMultipleStores, isLocatario } = useStoreContext();
 
   // Get user's marca for proveedor users
   const { data: userMarcaId } = useCurrentUserMarca();
@@ -77,16 +79,23 @@ const Dashboard = () => {
       {/* Store Context Info for Providers */}
       {isProvider && <StoreContextInfo />}
 
-      <div>
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">{dashboardData.title}</h1>
-          {profile?.role === 'proveedor' && currentStore?.marca_name && (
-            <Badge variant="outline" className="text-sm">
-              {currentStore.marca_name}
-            </Badge>
-          )}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">{dashboardData.title}</h1>
+            {profile?.role === 'proveedor' && currentStore?.marca_name && (
+              <Badge variant="outline" className="text-sm">
+                {currentStore.marca_name}
+              </Badge>
+            )}
+          </div>
+          <p className="text-muted-foreground">{dashboardData.description}</p>
         </div>
-        <p className="text-muted-foreground">{dashboardData.description}</p>
+
+        {/* Invite Provider Button for Locatarios */}
+        {(isLocatario || profile?.role === 'locatario') && (
+          <InviteProviderDialog />
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -107,6 +116,37 @@ const Dashboard = () => {
           );
         })}
       </div>
+
+      {/* Quick Actions for Locatarios */}
+      {(isLocatario || profile?.role === 'locatario') && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Gestión de Proveedores
+            </CardTitle>
+            <CardDescription>
+              Invita y gestiona los proveedores de tu tienda
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Invitar nuevo proveedor</p>
+                <p className="text-xs text-muted-foreground">
+                  Envía una invitación por correo electrónico para que un proveedor se una a tu tienda
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <CompactInviteButton />
+                <Button size="sm" variant="outline" asChild>
+                  <a href="/stores">Ver Todos</a>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
