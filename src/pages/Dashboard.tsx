@@ -3,7 +3,7 @@ import { useStoreContext } from '@/hooks/useStoreContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package, ShoppingCart, AlertTriangle, TrendingUp, UserPlus, Users } from 'lucide-react';
+import { Package, ShoppingCart, TrendingUp, UserPlus, Users, Store } from 'lucide-react';
 import BsaleConnectionTest from '@/components/BsaleConnectionTest';
 import StoreSelector, { StoreContextInfo } from '@/components/StoreSelector';
 import InviteProviderDialog, { CompactInviteButton } from '@/components/InviteProviderDialog';
@@ -29,7 +29,7 @@ const Dashboard = () => {
           stats: [
             { title: 'Total Productos', value: '1,234', icon: Package, color: 'text-blue-600' },
             { title: 'Ventas del Mes', value: '$45,231', icon: ShoppingCart, color: 'text-green-600' },
-            { title: 'Alertas Activas', value: '12', icon: AlertTriangle, color: 'text-orange-600' },
+            { title: 'Tiendas Activas', value: '8', icon: Store, color: 'text-orange-600' },
             { title: 'Crecimiento', value: '+12%', icon: TrendingUp, color: 'text-purple-600' },
           ]
         };
@@ -45,8 +45,8 @@ const Dashboard = () => {
           stats: [
             { title: 'Mis Productos', value: productCount.toString(), icon: Package, color: 'text-blue-600' },
             { title: 'Ventas del Mes', value: '$12,340', icon: ShoppingCart, color: 'text-green-600' },
-            { title: 'Stock Bajo', value: lowStockCount.toString(), icon: AlertTriangle, color: 'text-orange-600' },
-            { title: 'Tiendas Activas', value: storeCount, icon: TrendingUp, color: 'text-purple-600' },
+            { title: 'Stock Bajo', value: lowStockCount.toString(), icon: Package, color: 'text-orange-600' },
+            { title: 'Tiendas Activas', value: storeCount, icon: Store, color: 'text-purple-600' },
           ]
         };
       case 'locatario':
@@ -56,8 +56,8 @@ const Dashboard = () => {
           stats: [
             { title: 'Productos en Tienda', value: '89', icon: Package, color: 'text-blue-600' },
             { title: 'Ventas Hoy', value: '$1,890', icon: ShoppingCart, color: 'text-green-600' },
-            { title: 'Alertas', value: '3', icon: AlertTriangle, color: 'text-orange-600' },
-            { title: 'Proveedores', value: '4', icon: TrendingUp, color: 'text-purple-600' },
+            { title: 'Stock Total', value: '1,245', icon: Package, color: 'text-orange-600' },
+            { title: 'Proveedores', value: '4', icon: Users, color: 'text-purple-600' },
           ]
         };
       default:
@@ -174,20 +174,21 @@ const Dashboard = () => {
 
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Alertas de Stock</CardTitle>
+            <CardTitle>Productos Recientes</CardTitle>
             <CardDescription>
-              Productos con stock bajo que requieren atención
+              Últimos productos agregados al sistema
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {[1, 2, 3].map((item) => (
                 <div key={item} className="flex items-center space-x-4">
-                  <AlertTriangle className="h-4 w-4 text-orange-500" />
+                  <Package className="h-4 w-4 text-blue-500" />
                   <div className="flex-1">
                     <p className="text-sm font-medium">Producto {item}</p>
-                    <p className="text-xs text-muted-foreground">Stock: {item} unidades</p>
+                    <p className="text-xs text-muted-foreground">Agregado hace {item} días</p>
                   </div>
+                  <Badge variant="outline">Activo</Badge>
                 </div>
               ))}
             </div>

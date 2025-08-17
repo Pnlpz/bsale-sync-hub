@@ -8,9 +8,9 @@ import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import Layout from "@/components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminRedirect from "./pages/AdminRedirect";
 import Inventory from "./pages/Inventory";
 import Sales from "./pages/Sales";
-import Alerts from "./pages/Alerts";
 import Users from "./pages/Users";
 import Stores from "./pages/Stores";
 import Settings from "./pages/Settings";
@@ -31,6 +31,13 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/invitation/accept" element={<InvitationAccept />} />
             <Route path="/" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AdminRedirect />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Layout>
                   <Dashboard />
@@ -58,13 +65,7 @@ const App = () => (
                 </Layout>
               </ProtectedRoute>
             } />
-            <Route path="/alerts" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Alerts />
-                </Layout>
-              </ProtectedRoute>
-            } />
+
             <Route path="/users" element={
               <ProtectedRoute>
                 <Layout>

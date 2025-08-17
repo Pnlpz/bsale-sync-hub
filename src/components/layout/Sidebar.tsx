@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
-  AlertTriangle,
   Settings,
   LogOut,
   Users,
@@ -19,22 +18,24 @@ const Sidebar = () => {
   const location = useLocation();
 
   const getMenuItems = () => {
-    const baseItems = [
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-      { icon: Package, label: 'Inventario', path: '/inventory' },
-      { icon: ShoppingCart, label: 'Ventas', path: '/sales' },
-      { icon: AlertTriangle, label: 'Alertas', path: '/alerts' },
-    ];
-
     if (profile?.role === 'admin') {
-      baseItems.splice(1, 0, { icon: Shield, label: 'Panel Admin', path: '/admin' });
-      baseItems.push(
+      // Admin menu - no Dashboard or Inventory, focused on administration
+      return [
+        { icon: Shield, label: 'Panel Admin', path: '/admin' },
+        { icon: ShoppingCart, label: 'Ventas', path: '/sales' },
         { icon: Users, label: 'Usuarios', path: '/users' },
-        { icon: Store, label: 'Tiendas', path: '/stores' }
-      );
+        { icon: Store, label: 'Tiendas', path: '/stores' },
+        { icon: Settings, label: 'Configuración', path: '/settings' },
+      ];
     }
 
-    baseItems.push({ icon: Settings, label: 'Configuración', path: '/settings' });
+    // Locatario and Proveedor menu - includes Dashboard
+    const baseItems = [
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+      { icon: Package, label: 'Inventario', path: '/inventory' },
+      { icon: ShoppingCart, label: 'Ventas', path: '/sales' },
+      { icon: Settings, label: 'Configuración', path: '/settings' },
+    ];
 
     return baseItems;
   };

@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle, XCircle, Wifi } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, CheckCircle, XCircle, Wifi, Shield, Lock } from 'lucide-react';
 import { bsaleClient } from '@/lib/bsale-client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ConnectionTestResult {
   success: boolean;
@@ -13,8 +15,12 @@ interface ConnectionTestResult {
 }
 
 const BsaleConnectionTest: React.FC = () => {
+  const { profile } = useAuth();
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<ConnectionTestResult | null>(null);
+
+  // Check if user is admin
+  const isAdmin = profile?.role === 'admin';
 
   const testConnection = async () => {
     setTesting(true);
@@ -44,6 +50,52 @@ const BsaleConnectionTest: React.FC = () => {
     }
   };
 
+  // If not admin, show restricted access message
+  if (!isAdmin) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Lock className="mr-2 h-5 w-5 text-amber-600" />
+            Configuración API Bsale
+          </CardTitle>
+          <CardDescription>
+            Configuración de la integración con Bsale
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Acceso Restringido:</strong> Solo el administrador puede configurar y gestionar la conexión con la API de Bsale.
+              Si necesitas cambios en la configuración, contacta al administrador del sistema.
+            </AlertDescription>
+          </Alert>
+
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <h4 className="font-medium mb-2 flex items-center">
+              <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+              Estado de la Integración
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Tu tienda está configurada y conectada con Bsale. Todas las funcionalidades de sincronización están disponibles.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="font-medium">Funcionalidades Disponibles:</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• Sincronización automática de productos</li>
+              <li>• Actualización de inventario en tiempo real</li>
+              <li>• Registro de ventas</li>
+              <li>• Gestión de proveedores</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -52,10 +104,17 @@ const BsaleConnectionTest: React.FC = () => {
           Test de Conexión Bsale
         </CardTitle>
         <CardDescription>
-          Verifica que la conexión con la API de Bsale esté funcionando correctamente
+          Verifica que la conexión con la API de Bsale esté funcionando correctamente (Solo Administradores)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <Alert>
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            Como administrador, puedes probar y gestionar la conexión con la API de Bsale.
+            Los locatarios no pueden modificar esta configuración.
+          </AlertDescription>
+        </Alert>
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">Estado de la API</p>

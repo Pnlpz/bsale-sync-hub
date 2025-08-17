@@ -8,19 +8,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
-import { 
-  Store, 
-  Users, 
-  ShoppingCart, 
-  DollarSign, 
+import {
+  Store,
+  Users,
+  ShoppingCart,
+  DollarSign,
   Search,
   Settings,
   Calendar,
@@ -31,6 +31,7 @@ import {
   Edit
 } from 'lucide-react';
 import { StoreData } from '@/hooks/useAdminDashboard';
+import { CreateStoreModal } from './CreateStoreModal';
 
 interface AdminStoreManagementProps {
   stores: StoreData[];
@@ -39,6 +40,7 @@ interface AdminStoreManagementProps {
 
 export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagementProps) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const filteredStores = stores?.filter(store =>
     store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -75,7 +77,7 @@ export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagement
           <Button onClick={onRefresh} variant="outline">
             Actualizar
           </Button>
-          <Button>
+          <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Nueva Tienda
           </Button>
@@ -255,7 +257,7 @@ export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagement
               <p className="text-muted-foreground">
                 {searchTerm ? 'No se encontraron tiendas que coincidan con la búsqueda.' : 'No hay tiendas registradas.'}
               </p>
-              <Button className="mt-4">
+              <Button className="mt-4" onClick={() => setIsCreateModalOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Crear Primera Tienda
               </Button>
@@ -263,6 +265,16 @@ export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagement
           )}
         </CardContent>
       </Card>
+
+      {/* Create Store Modal */}
+      <CreateStoreModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
+          onRefresh();
+        }}
+      />
     </div>
   );
 };
