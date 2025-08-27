@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Search, Plus, RefreshCw, AlertTriangle, Filter } from 'lucide-react';
+import { Package, Search, Plus, RefreshCw, AlertCircle, Filter } from 'lucide-react';
 import { useBsaleProducts, useSyncProductsFromBsale } from '@/hooks/useBsale';
 import { useFilteredProducts, useMarcas, useCurrentUserMarca } from '@/hooks/useMarca';
 import BsaleIntegration from '@/components/BsaleIntegration';
@@ -200,7 +200,7 @@ const Inventory = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2" />
+                <Package className="h-5 w-5 mr-2" />
                 Control de Stock
               </CardTitle>
               <CardDescription>
@@ -209,7 +209,7 @@ const Inventory = () => {
             </CardHeader>
             <CardContent>
               <div className="text-center py-8">
-                <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">
                   Funcionalidad de control de stock en desarrollo
                 </p>

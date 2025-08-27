@@ -11,14 +11,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Users, 
-  Settings, 
-  RefreshCw, 
-  UserMinus, 
-  UserCheck, 
+import {
+  Users,
+  Settings,
+  RefreshCw,
+  UserMinus,
+  UserCheck,
   Tag,
-  AlertTriangle
+  AlertCircle
 } from 'lucide-react';
 import { useStoreProviders, useAssignMarcaToProvider, useRemoveProviderFromStore, useReactivateProviderInStore } from '@/hooks/useStore';
 import { useMarcas } from '@/hooks/useMarca';
@@ -165,7 +165,7 @@ export default function StoreProviderManagement({ storeId, storeName }: StorePro
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                          <AlertTriangle className="h-3 w-3" />
+                          <AlertCircle className="h-3 w-3" />
                           Sin asignar
                         </Badge>
                       )}

@@ -339,4 +339,81 @@ export class EmailService {
       // Don't throw error for system notifications
     }
   }
+
+  /**
+   * Send welcome email to new locatario with login credentials
+   */
+  static async sendLocatarioWelcomeEmail(params: {
+    to: string;
+    locatario_name: string;
+    store_name: string;
+    login_url: string;
+    temp_password: string;
+    admin_contact: string;
+  }): Promise<void> {
+    console.log('📧 Sending locatario welcome email:', {
+      to: params.to,
+      locatario_name: params.locatario_name,
+      store_name: params.store_name,
+      login_url: params.login_url,
+    });
+
+    try {
+      const welcomeContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #2563eb;">¡Bienvenido a Bsale Sync Hub!</h2>
+          <p>¡Hola <strong>${params.locatario_name}</strong>!</p>
+
+          <p>Tu tienda "<strong>${params.store_name}</strong>" ha sido creada exitosamente en Bsale Sync Hub.</p>
+
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #2563eb;">
+            <h3 style="margin-top: 0; color: #1f2937;">Credenciales de Acceso</h3>
+            <p><strong>Email:</strong> ${params.to}</p>
+            <p><strong>Contraseña temporal:</strong> <code style="background-color: #e5e7eb; padding: 2px 4px; border-radius: 3px;">${params.temp_password}</code></p>
+          </div>
+
+          <div style="margin: 30px 0;">
+            <a href="${params.login_url}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+              Iniciar Sesión Ahora
+            </a>
+          </div>
+
+          <div style="background-color: #f0f9ff; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #0ea5e9;">
+            <h3 style="margin-top: 0; color: #0c4a6e;">✅ Tu tienda está completamente configurada</h3>
+            <p style="margin-bottom: 0;">La integración con Bsale ya está configurada por el administrador. Puedes comenzar a usar todas las funcionalidades inmediatamente.</p>
+          </div>
+
+          <h3>Próximos Pasos:</h3>
+          <ol>
+            <li>Inicia sesión con las credenciales proporcionadas</li>
+            <li>Cambia tu contraseña temporal por una segura</li>
+            <li>Explora el panel de control de tu tienda</li>
+            <li>Invita proveedores a tu tienda</li>
+            <li>Comienza a gestionar tu inventario y ventas</li>
+          </ol>
+
+          <div style="background-color: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>Importante:</strong> Por seguridad, cambia tu contraseña temporal después del primer inicio de sesión.</p>
+          </div>
+
+          <p>Si tienes alguna pregunta o necesitas ayuda, no dudes en contactarnos en <a href="mailto:${params.admin_contact}">${params.admin_contact}</a></p>
+
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; text-align: center;">
+            <p>¡Esperamos que tengas una excelente experiencia con Bsale Sync Hub!</p>
+            <p>El equipo de Bsale Sync Hub</p>
+          </div>
+        </div>
+      `;
+
+      // Mock email sending - replace with real email service
+      console.log(`📧 LOCATARIO WELCOME EMAIL SENT TO: ${params.to}`);
+
+      // Simulate email sending delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+    } catch (error) {
+      console.error('Failed to send locatario welcome email:', error);
+      throw new Error('No se pudo enviar el correo de bienvenida');
+    }
+  }
 }
