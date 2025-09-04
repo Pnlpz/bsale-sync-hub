@@ -11,10 +11,6 @@ export interface AdminDashboardStats {
   activeLocatarios: number;
   totalProveedores: number;
   activeProveedores: number;
-  totalSales: number;
-  salesThisMonth: number;
-  totalRevenue: number;
-  revenueThisMonth: number;
 }
 
 export interface LocatarioData {
@@ -100,100 +96,122 @@ const fetchAdminDashboardData = async (): Promise<AdminDashboardData> => {
   // Fetch basic stats
   const [
     { count: totalLocatarios },
-    { count: totalProveedores },
-    { count: totalSales },
-    { data: revenueData }
+    { count: totalProveedores }
   ] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'locatario'),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'proveedor'),
-    supabase.from('sales').select('*', { count: 'exact', head: true }),
-    supabase.from('sales').select('total_amount')
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'proveedor')
   ]);
 
-  const totalRevenue = revenueData?.reduce((sum, sale) => sum + (sale.total_amount || 0), 0) || 0;
-
-  // Fetch this month's data
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
-
-  const [
-    { count: salesThisMonth },
-    { data: revenueThisMonthData }
-  ] = await Promise.all([
-    supabase
-      .from('sales')
-      .select('*', { count: 'exact', head: true })
-      .gte('sale_date', startOfMonth.toISOString()),
-    supabase
-      .from('sales')
-      .select('total_amount')
-      .gte('sale_date', startOfMonth.toISOString())
-  ]);
-
-  const revenueThisMonth = revenueThisMonthData?.reduce((sum, sale) => sum + (sale.total_amount || 0), 0) || 0;
-
-  // Fetch detailed locatarios data
-  const { data: locatariosData } = await supabase
-    .from('profiles')
-    .select(`
-      id,
-      name,
-      email,
-      created_at,
-      store_id,
-      stores (
+  // Fetch detailed locatarios data - handle missing tables gracefully
+  let locatariosData = null;
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
         id,
-        name
-      )
-    `)
-    .eq('role', 'locatario');
+        name,
+        email,
+        created_at,
+        store_id
+      `)
+      .eq('role', 'locatario');
+
+    if (!error) {
+      locatariosData = data;
+    }
+  } catch (error) {
+    console.warn('Could not fetch locatarios data:', error);
+    locatariosData = [];
+  }
 
   // Fetch sales and provider counts for each locatario
   const locatarios: LocatarioData[] = await Promise.all(
     (locatariosData || []).map(async (locatario) => {
-      const storeId = locatario.store_id || locatario.stores?.id;
-      
-      const [
-        { count: salesCount },
-        { data: salesRevenue },
-        { count: proveedoresCount },
-        { count: productsCount }
-      ] = await Promise.all([
-        supabase.from('sales').select('*', { count: 'exact', head: true }).eq('store_id', storeId),
-        supabase.from('sales').select('total_amount').eq('store_id', storeId),
-        supabase.from('store_providers').select('*', { count: 'exact', head: true }).eq('store_id', storeId).eq('is_active', true),
-        supabase.from('products').select('*', { count: 'exact', head: true }).eq('store_id', storeId)
-      ]);
+      const storeId = locatario.store_id;
 
-      const revenue = salesRevenue?.reduce((sum, sale) => sum + (sale.total_amount || 0), 0) || 0;
+      // Get store name if we have a store_id
+      let storeName = 'Sin tienda';
+      if (storeId) {
+        try {
+          const { data: storeData } = await supabase
+            .from('stores')
+            .select('name')
+            .eq('id', storeId)
+            .single();
+
+          if (storeData) {
+            storeName = storeData.name;
+          }
+        } catch (error) {
+          console.warn('Could not fetch store name:', error);
+        }
+      }
+
+      // Get counts with error handling
+      let salesCount = 0;
+      let revenue = 0;
+      let proveedoresCount = 0;
+      let productsCount = 0;
+
+      if (storeId) {
+        try {
+          const { count } = await supabase.from('sales').select('*', { count: 'exact', head: true }).eq('store_id', storeId);
+          salesCount = count || 0;
+        } catch (error) {
+          console.warn('Could not fetch sales count:', error);
+        }
+
+        try {
+          const { data: salesRevenue } = await supabase.from('sales').select('total_amount').eq('store_id', storeId);
+          revenue = salesRevenue?.reduce((sum, sale) => sum + (sale.total_amount || 0), 0) || 0;
+        } catch (error) {
+          console.warn('Could not fetch sales revenue:', error);
+        }
+
+        try {
+          const { count } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('store_id', storeId);
+          productsCount = count || 0;
+        } catch (error) {
+          console.warn('Could not fetch products count:', error);
+        }
+      }
 
       return {
         id: locatario.id,
         name: locatario.name,
         email: locatario.email,
-        store_name: locatario.stores?.name || 'Sin tienda',
+        store_name: storeName,
         store_id: storeId,
-        total_sales: salesCount || 0,
+        total_sales: salesCount,
         total_revenue: revenue,
-        proveedores_count: proveedoresCount || 0,
-        products_count: productsCount || 0,
+        proveedores_count: proveedoresCount,
+        products_count: productsCount,
         created_at: locatario.created_at,
         last_login: locatario.created_at, // TODO: Add last_login tracking
       };
     })
   );
 
-  // Fetch detailed proveedores data
-  const { data: proveedoresData } = await supabase
-    .from('profiles')
-    .select(`
-      id,
-      name,
-      email,
-      created_at
-    `)
-    .eq('role', 'proveedor');
+  // Fetch detailed proveedores data - handle missing tables gracefully
+  let proveedoresData = null;
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        name,
+        email,
+        created_at
+      `)
+      .eq('role', 'proveedor');
+
+    if (!error) {
+      proveedoresData = data;
+    }
+  } catch (error) {
+    console.warn('Could not fetch proveedores data:', error);
+    proveedoresData = [];
+  }
 
   const proveedores: ProveedorData[] = await Promise.all(
     (proveedoresData || []).map(async (proveedor) => {
@@ -238,15 +256,16 @@ const fetchAdminDashboardData = async (): Promise<AdminDashboardData> => {
       id,
       name,
       address,
-      bsale_store_id,
-      bsale_api_token,
+      locatario_id,
       created_at,
-      store_locatarios (
-        locatario_id,
-        profiles (
-          name,
-          email
-        )
+      locatario:profiles!stores_locatario_id_fkey (
+        name,
+        email
+      ),
+      bsale_config (
+        bsale_store_id,
+        bsale_api_token,
+        is_active
       )
     `);
 
@@ -265,7 +284,8 @@ const fetchAdminDashboardData = async (): Promise<AdminDashboardData> => {
       ]);
 
       const revenue = salesRevenue?.reduce((sum, sale) => sum + (sale.total_amount || 0), 0) || 0;
-      const locatario = store.store_locatarios?.[0]?.profiles;
+      const locatario = store.locatario;
+      const bsaleConfig = store.bsale_config?.[0];
 
       return {
         id: store.id,
@@ -277,8 +297,8 @@ const fetchAdminDashboardData = async (): Promise<AdminDashboardData> => {
         products_count: productsCount || 0,
         total_sales: salesCount || 0,
         total_revenue: revenue,
-        bsale_store_id: store.bsale_store_id || '',
-        api_configured: !!(store.bsale_store_id && store.bsale_api_token),
+        bsale_store_id: bsaleConfig?.bsale_store_id || '',
+        api_configured: !!(bsaleConfig?.bsale_store_id && bsaleConfig?.bsale_api_token && bsaleConfig?.is_active),
         created_at: store.created_at,
       };
     })
@@ -304,10 +324,6 @@ const fetchAdminDashboardData = async (): Promise<AdminDashboardData> => {
       activeLocatarios: totalLocatarios || 0, // TODO: Add active status
       totalProveedores: totalProveedores || 0,
       activeProveedores: totalProveedores || 0, // TODO: Add active status
-      totalSales: totalSales || 0,
-      salesThisMonth: salesThisMonth || 0,
-      totalRevenue,
-      revenueThisMonth,
     },
     locatarios,
     proveedores,
