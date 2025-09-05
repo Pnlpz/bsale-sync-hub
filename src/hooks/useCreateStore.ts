@@ -6,7 +6,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { EmailService } from '@/services/email-service';
-import { EmailService } from '@/services/email-service';
 
 export interface CreateStoreData {
   storeData: {

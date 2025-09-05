@@ -30,6 +30,8 @@ interface StoreFormData {
 export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModalProps) => {
   const { toast } = useToast();
   const [showDatabaseInstructions, setShowDatabaseInstructions] = useState(false);
+  const [emailContent, setEmailContent] = useState<string>('');
+  const [showEmailContent, setShowEmailContent] = useState(false);
   const [formData, setFormData] = useState<StoreFormData>({
     name: '',
     address: '',
@@ -124,17 +126,29 @@ export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModa
 
     } catch (error: any) {
       // Check if it's a database configuration error
-      if (error.message?.includes('foreign key constraint') || 
+      if (error.message?.includes('foreign key constraint') ||
           error.message?.includes('not-null constraint') ||
           error.message?.includes('configuración de base de datos')) {
         setShowDatabaseInstructions(true);
       }
-      
-      toast({
-        title: 'Error al crear tienda',
-        description: error.message || 'Ocurrió un error inesperado',
-        variant: 'destructive',
-      });
+
+      // Check if store was created but email failed
+      if (error.message?.includes('Email content for manual sending')) {
+        // Extract email content from console logs (this is a workaround)
+        // In a real implementation, the createStore function should return the email content
+        setShowEmailContent(true);
+        toast({
+          title: 'Tienda creada - Email manual requerido',
+          description: 'La tienda se creó exitosamente. Revisa las instrucciones para enviar el email de invitación.',
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Error al crear tienda',
+          description: error.message || 'Ocurrió un error inesperado',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
