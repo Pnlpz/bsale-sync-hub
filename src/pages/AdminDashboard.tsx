@@ -22,9 +22,9 @@ import {
 } from 'lucide-react';
 import { useAdminDashboardData } from '@/hooks/useAdminDashboard';
 import { AdminLocatariosList } from '@/components/admin/AdminLocatariosList';
-import { AdminSalesOverview } from '@/components/admin/AdminSalesOverview';
 import { AdminProveedoresList } from '@/components/admin/AdminProveedoresList';
 import { AdminStoreManagement } from '@/components/admin/AdminStoreManagement';
+import { AdminStorePerformance } from '@/components/admin/AdminStorePerformance';
 
 const AdminDashboard = () => {
   const { profile } = useAuth();
@@ -105,7 +105,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Key Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Locatarios</CardTitle>
@@ -114,7 +114,7 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalLocatarios || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.activeLocatarios || 0} activos
+              Tiendas registradas en el sistema
             </p>
           </CardContent>
         </Card>
@@ -127,46 +127,31 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalProveedores || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.activeProveedores || 0} activos
+              Proveedores activos en el sistema
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ventas Totales</CardTitle>
+            <CardTitle className="text-sm font-medium">Tiendas Activas</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSales || 0}</div>
+            <div className="text-2xl font-bold">{dashboardData?.stores?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Este mes: {stats.salesThisMonth || 0}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${(stats.totalRevenue || 0).toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Este mes: ${(stats.revenueThisMonth || 0).toLocaleString()}
+              Tiendas configuradas y operativas
             </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs defaultValue="stores" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Resumen
+          <TabsTrigger value="stores">
+            <Settings className="h-4 w-4 mr-2" />
+            Tiendas
           </TabsTrigger>
           <TabsTrigger value="locatarios">
             <Store className="h-4 w-4 mr-2" />
@@ -176,35 +161,35 @@ const AdminDashboard = () => {
             <Users className="h-4 w-4 mr-2" />
             Proveedores
           </TabsTrigger>
-          <TabsTrigger value="stores">
-            <Settings className="h-4 w-4 mr-2" />
-            Tiendas
+          <TabsTrigger value="performance">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Rendimiento
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          <AdminSalesOverview data={dashboardData?.salesOverview} />
+        <TabsContent value="stores" className="space-y-4">
+          <AdminStoreManagement
+            stores={dashboardData?.stores}
+            onRefresh={refetch}
+          />
         </TabsContent>
 
         <TabsContent value="locatarios" className="space-y-4">
-          <AdminLocatariosList 
-            locatarios={dashboardData?.locatarios} 
+          <AdminLocatariosList
+            locatarios={dashboardData?.locatarios}
             onRefresh={refetch}
           />
         </TabsContent>
 
         <TabsContent value="proveedores" className="space-y-4">
-          <AdminProveedoresList 
+          <AdminProveedoresList
             proveedores={dashboardData?.proveedores}
             onRefresh={refetch}
           />
         </TabsContent>
 
-        <TabsContent value="stores" className="space-y-4">
-          <AdminStoreManagement 
-            stores={dashboardData?.stores}
-            onRefresh={refetch}
-          />
+        <TabsContent value="performance" className="space-y-4">
+          <AdminStorePerformance stores={dashboardData?.stores} />
         </TabsContent>
       </Tabs>
     </div>

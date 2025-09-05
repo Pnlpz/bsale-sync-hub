@@ -1,30 +1,17 @@
 /**
- * Create Store Modal Component
- * Allows admins to create new stores, assign locatarios, and configure Bsale API
+ * Simple Create Store Modal Component - Fixed Version
  */
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Store, 
-  User, 
-  Mail, 
-  MapPin, 
-  Settings, 
-  Loader2, 
-  CheckCircle,
-  AlertCircle,
-  Send
-} from 'lucide-react';
+import { Store, Loader2, AlertTriangle } from 'lucide-react';
 import { useCreateStore } from '@/hooks/useCreateStore';
 import { useToast } from '@/hooks/use-toast';
+import { DatabaseSetupInstructions } from './DatabaseSetupInstructions';
 
 interface CreateStoreModalProps {
   isOpen: boolean;
@@ -37,19 +24,19 @@ interface StoreFormData {
   address: string;
   locatarioName: string;
   locatarioEmail: string;
-  bsaleStoreId: string;
   bsaleApiToken: string;
 }
 
 export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModalProps) => {
   const { toast } = useToast();
-  const [currentStep, setCurrentStep] = useState<'store' | 'locatario' | 'api'>('store');
+  const [showDatabaseInstructions, setShowDatabaseInstructions] = useState(false);
+  const [emailContent, setEmailContent] = useState<string>('');
+  const [showEmailContent, setShowEmailContent] = useState(false);
   const [formData, setFormData] = useState<StoreFormData>({
     name: '',
     address: '',
     locatarioName: '',
     locatarioEmail: '',
-    bsaleStoreId: '',
     bsaleApiToken: '',
   });
 
@@ -59,7 +46,7 @@ export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModa
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const validateStoreInfo = () => {
+  const validateForm = () => {
     if (!formData.name.trim()) {
       toast({
         title: 'Error',
@@ -71,15 +58,11 @@ export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModa
     if (!formData.address.trim()) {
       toast({
         title: 'Error',
-        description: 'La dirección de la tienda es requerida',
+        description: 'La dirección es requerida',
         variant: 'destructive',
       });
       return false;
     }
-    return true;
-  };
-
-  const validateLocatarioInfo = () => {
     if (!formData.locatarioName.trim()) {
       toast({
         title: 'Error',
@@ -96,31 +79,10 @@ export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModa
       });
       return false;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.locatarioEmail)) {
-      toast({
-        title: 'Error',
-        description: 'El email del locatario no es válido',
-        variant: 'destructive',
-      });
-      return false;
-    }
-    return true;
-  };
-
-  const validateApiInfo = () => {
-    if (!formData.bsaleStoreId.trim()) {
-      toast({
-        title: 'Error',
-        description: 'El ID de Tienda Bsale es requerido',
-        variant: 'destructive',
-      });
-      return false;
-    }
     if (!formData.bsaleApiToken.trim()) {
       toast({
         title: 'Error',
-        description: 'El Token API Bsale es requerido',
+        description: 'El token de API de Bsale es requerido',
         variant: 'destructive',
       });
       return false;
@@ -128,24 +90,8 @@ export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModa
     return true;
   };
 
-  const handleNext = () => {
-    if (currentStep === 'store' && validateStoreInfo()) {
-      setCurrentStep('locatario');
-    } else if (currentStep === 'locatario' && validateLocatarioInfo()) {
-      setCurrentStep('api');
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep === 'locatario') {
-      setCurrentStep('store');
-    } else if (currentStep === 'api') {
-      setCurrentStep('locatario');
-    }
-  };
-
   const handleSubmit = async () => {
-    if (!validateStoreInfo() || !validateLocatarioInfo() || !validateApiInfo()) {
+    if (!validateForm()) {
       return;
     }
 
@@ -154,7 +100,6 @@ export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModa
         storeData: {
           name: formData.name,
           address: formData.address,
-          bsale_store_id: formData.bsaleStoreId,
           bsale_api_token: formData.bsaleApiToken,
         },
         locatarioData: {
@@ -165,7 +110,7 @@ export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModa
 
       toast({
         title: '¡Tienda creada exitosamente!',
-        description: `La tienda "${formData.name}" ha sido creada con API configurada y se ha enviado una invitación a ${formData.locatarioEmail}`,
+        description: `La tienda "${formData.name}" ha sido creada y se ha enviado una invitación por correo a ${formData.locatarioEmail}`,
       });
 
       // Reset form and close modal
@@ -174,25 +119,41 @@ export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModa
         address: '',
         locatarioName: '',
         locatarioEmail: '',
-        bsaleStoreId: '',
         bsaleApiToken: '',
       });
-      setCurrentStep('store');
       onClose();
       onSuccess();
 
     } catch (error: any) {
-      toast({
-        title: 'Error al crear tienda',
-        description: error.message || 'Ocurrió un error inesperado',
-        variant: 'destructive',
-      });
+      // Check if it's a database configuration error
+      if (error.message?.includes('foreign key constraint') ||
+          error.message?.includes('not-null constraint') ||
+          error.message?.includes('configuración de base de datos')) {
+        setShowDatabaseInstructions(true);
+      }
+
+      // Check if store was created but email failed
+      if (error.message?.includes('Email content for manual sending')) {
+        // Extract email content from console logs (this is a workaround)
+        // In a real implementation, the createStore function should return the email content
+        setShowEmailContent(true);
+        toast({
+          title: 'Tienda creada - Email manual requerido',
+          description: 'La tienda se creó exitosamente. Revisa las instrucciones para enviar el email de invitación.',
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Error al crear tienda',
+          description: error.message || 'Ocurrió un error inesperado',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
   const handleClose = () => {
     if (!createStore.isPending) {
-      setCurrentStep('store');
       onClose();
     }
   };
@@ -203,184 +164,104 @@ export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModa
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Store className="h-5 w-5 text-blue-600" />
-            Crear Nueva Tienda
+            {showDatabaseInstructions ? 'Configuración Requerida' : 'Crear Nueva Tienda'}
           </DialogTitle>
           <DialogDescription>
-            Configura una nueva tienda, asigna un locatario y configura la integración con Bsale
+            {showDatabaseInstructions 
+              ? 'Se requiere configurar la base de datos antes de crear tiendas'
+              : 'Configura una nueva tienda, asigna un locatario y configura la integración con Bsale'
+            }
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={currentStep} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="store" className="flex items-center gap-2">
-              <Store className="h-4 w-4" />
-              Tienda
-            </TabsTrigger>
-            <TabsTrigger value="locatario" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Locatario
-            </TabsTrigger>
-            <TabsTrigger value="api" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              API Bsale
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="store" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Información de la Tienda</CardTitle>
-                <CardDescription>
-                  Ingresa los datos básicos de la nueva tienda
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="storeName">Nombre de la Tienda *</Label>
+        {showDatabaseInstructions ? (
+          <div className="space-y-4">
+            <DatabaseSetupInstructions />
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDatabaseInstructions(false)}
+              >
+                Volver al Formulario
+              </Button>
+              <Button onClick={handleClose}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Store Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Información de la Tienda</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="name">Nombre de la Tienda</Label>
                   <Input
-                    id="storeName"
-                    placeholder="Ej: Tienda Central Santiago"
+                    id="name"
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    disabled={createStore.isPending}
+                    placeholder="Ej: Tienda Central Santiago"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="storeAddress">Dirección *</Label>
-                  <Textarea
-                    id="storeAddress"
-                    placeholder="Ej: Av. Providencia 1234, Providencia, Santiago"
+                <div>
+                  <Label htmlFor="address">Dirección</Label>
+                  <Input
+                    id="address"
                     value={formData.address}
                     onChange={(e) => handleInputChange('address', e.target.value)}
-                    disabled={createStore.isPending}
-                    rows={3}
+                    placeholder="Ej: Av. Providencia 1234, Santiago"
                   />
                 </div>
-                <Alert>
-                  <Store className="h-4 w-4" />
-                  <AlertDescription>
-                    Esta información será visible para los proveedores y se usará para identificar la tienda en el sistema.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </div>
 
-          <TabsContent value="locatario" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Asignar Locatario</CardTitle>
-                <CardDescription>
-                  El locatario será el responsable de gestionar esta tienda
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="locatarioName">Nombre Completo *</Label>
+            {/* Locatario Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Información del Locatario</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="locatarioName">Nombre del Locatario</Label>
                   <Input
                     id="locatarioName"
-                    placeholder="Ej: Juan Pérez González"
                     value={formData.locatarioName}
                     onChange={(e) => handleInputChange('locatarioName', e.target.value)}
-                    disabled={createStore.isPending}
+                    placeholder="Ej: Juan Pérez González"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="locatarioEmail">Correo Electrónico *</Label>
+                <div>
+                  <Label htmlFor="locatarioEmail">Email del Locatario</Label>
                   <Input
                     id="locatarioEmail"
                     type="email"
-                    placeholder="juan@ejemplo.com"
                     value={formData.locatarioEmail}
                     onChange={(e) => handleInputChange('locatarioEmail', e.target.value)}
-                    disabled={createStore.isPending}
+                    placeholder="Ej: juan@ejemplo.com"
                   />
                 </div>
-                <Alert>
-                  <Mail className="h-4 w-4" />
-                  <AlertDescription>
-                    Se enviará una invitación por correo electrónico al locatario para que pueda acceder al sistema y gestionar su tienda.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </div>
 
-          <TabsContent value="api" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Configuración API Bsale</CardTitle>
-                <CardDescription>
-                  Configura la integración con Bsale (REQUERIDO - Solo el admin puede configurar la API)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="bsaleStoreId">ID de Tienda Bsale *</Label>
-                  <Input
-                    id="bsaleStoreId"
-                    placeholder="Ej: 123456"
-                    value={formData.bsaleStoreId}
-                    onChange={(e) => handleInputChange('bsaleStoreId', e.target.value)}
-                    disabled={createStore.isPending}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Obtén este ID desde tu panel de administración de Bsale
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bsaleApiToken">Token API Bsale *</Label>
-                  <Input
-                    id="bsaleApiToken"
-                    type="password"
-                    placeholder="Token de acceso a la API de Bsale"
-                    value={formData.bsaleApiToken}
-                    onChange={(e) => handleInputChange('bsaleApiToken', e.target.value)}
-                    disabled={createStore.isPending}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Token de autenticación para acceder a la API de Bsale
-                  </p>
-                </div>
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>IMPORTANTE:</strong> La configuración de API es obligatoria y solo puede ser realizada por el administrador.
-                    El locatario NO podrá configurar estos datos desde su panel.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            {/* API Configuration */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Configuración API Bsale</h3>
+              <div>
+                <Label htmlFor="bsaleApiToken">Token de API Bsale</Label>
+                <Input
+                  id="bsaleApiToken"
+                  type="password"
+                  value={formData.bsaleApiToken}
+                  onChange={(e) => handleInputChange('bsaleApiToken', e.target.value)}
+                  placeholder="Ingresa el token de API de Bsale"
+                />
+              </div>
+            </div>
 
-        <div className="flex justify-between pt-4">
-          <div>
-            {currentStep !== 'store' && (
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                disabled={createStore.isPending}
-              >
-                Anterior
+            {/* Actions */}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={handleClose}>
+                Cancelar
               </Button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              disabled={createStore.isPending}
-            >
-              Cancelar
-            </Button>
-            {currentStep !== 'api' ? (
-              <Button onClick={handleNext} disabled={createStore.isPending}>
-                Siguiente
-              </Button>
-            ) : (
               <Button onClick={handleSubmit} disabled={createStore.isPending}>
                 {createStore.isPending ? (
                   <>
@@ -388,15 +269,12 @@ export const CreateStoreModal = ({ isOpen, onClose, onSuccess }: CreateStoreModa
                     Creando...
                   </>
                 ) : (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Crear Tienda
-                  </>
+                  'Crear Tienda'
                 )}
               </Button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -28,7 +28,9 @@ import {
   CheckCircle,
   XCircle,
   Plus,
-  Edit
+  Edit,
+  AlertCircle,
+  User
 } from 'lucide-react';
 import { StoreData } from '@/hooks/useAdminDashboard';
 import { CreateStoreModal } from './CreateStoreModal';
@@ -41,12 +43,31 @@ interface AdminStoreManagementProps {
 export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagementProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'no-locatario'>('all');
 
-  const filteredStores = stores?.filter(store =>
-    store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    store.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    store.locatario_name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredStores = stores?.filter(store => {
+    // Text search filter
+    const matchesSearch = store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      store.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      store.locatario_name.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Status filter
+    const matchesStatus = (() => {
+      switch (statusFilter) {
+        case 'active':
+          return store.api_configured;
+        case 'pending':
+          return !store.api_configured;
+        case 'no-locatario':
+          return store.locatario_name === 'Sin asignar';
+        case 'all':
+        default:
+          return true;
+      }
+    })();
+
+    return matchesSearch && matchesStatus;
+  }) || [];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
@@ -59,7 +80,13 @@ export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagement
     return new Date(dateString).toLocaleDateString('es-CL');
   };
 
+  // Calculate store statistics
+  const totalStores = stores?.length || 0;
   const activeStores = stores?.filter(store => store.api_configured).length || 0;
+  const pendingStores = stores?.filter(store => !store.api_configured).length || 0;
+  const storesWithLocatario = stores?.filter(store => store.locatario_name !== 'Sin asignar').length || 0;
+  const pendingLocatarioStores = stores?.filter(store => store.locatario_name === 'Sin asignar').length || 0;
+
   const totalRevenue = stores?.reduce((sum, store) => sum + store.total_revenue, 0) || 0;
   const totalSales = stores?.reduce((sum, store) => sum + store.total_sales, 0) || 0;
 
@@ -84,15 +111,58 @@ export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagement
         </div>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center space-x-2">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar tiendas por nombre, dirección o locatario..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
+      {/* Search and Filters */}
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar tiendas por nombre, dirección o locatario..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+
+        {/* Status Filters */}
+        <div className="flex items-center space-x-2">
+          <span className="text-sm font-medium text-muted-foreground">Filtrar por estado:</span>
+          <div className="flex space-x-2">
+            <Button
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('all')}
+            >
+              Todas ({totalStores})
+            </Button>
+            <Button
+              variant={statusFilter === 'active' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('active')}
+              className={statusFilter === 'active' ? 'bg-green-600 hover:bg-green-700' : ''}
+            >
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Activas ({activeStores})
+            </Button>
+            <Button
+              variant={statusFilter === 'pending' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('pending')}
+              className={statusFilter === 'pending' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+            >
+              <AlertCircle className="h-3 w-3 mr-1" />
+              Pendientes API ({pendingStores})
+            </Button>
+            <Button
+              variant={statusFilter === 'no-locatario' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter('no-locatario')}
+              className={statusFilter === 'no-locatario' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+            >
+              <User className="h-3 w-3 mr-1" />
+              Sin Locatario ({pendingLocatarioStores})
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -103,13 +173,55 @@ export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagement
             <Store className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stores?.length || 0}</div>
+            <div className="text-2xl font-bold">{totalStores}</div>
             <p className="text-xs text-muted-foreground">
-              {activeStores} con API configurada
+              Tiendas creadas en el sistema
             </p>
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tiendas Activas</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{activeStores}</div>
+            <p className="text-xs text-muted-foreground">
+              Con API Bsale configurada
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pendientes API</CardTitle>
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{pendingStores}</div>
+            <p className="text-xs text-muted-foreground">
+              Sin configuración de API
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Locatarios Asignados</CardTitle>
+            <User className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{storesWithLocatario}</div>
+            <p className="text-xs text-muted-foreground">
+              {pendingLocatarioStores} sin asignar
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Additional Statistics */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Proveedores Totales</CardTitle>
@@ -119,6 +231,9 @@ export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagement
             <div className="text-2xl font-bold">
               {stores?.reduce((sum, store) => sum + store.proveedores_count, 0) || 0}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Across all stores
+            </p>
           </CardContent>
         </Card>
 
@@ -129,6 +244,9 @@ export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagement
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalSales}</div>
+            <p className="text-xs text-muted-foreground">
+              Transacciones registradas
+            </p>
           </CardContent>
         </Card>
 
@@ -139,6 +257,9 @@ export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagement
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground">
+              Revenue generado
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -182,10 +303,25 @@ export const AdminStoreManagement = ({ stores, onRefresh }: AdminStoreManagement
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div>
-                      <div className="font-medium">{store.locatario_name}</div>
-                      {store.locatario_email && (
-                        <div className="text-sm text-muted-foreground">{store.locatario_email}</div>
+                    <div className="flex items-center space-x-2">
+                      {store.locatario_name === 'Sin asignar' ? (
+                        <div className="flex items-center">
+                          <AlertCircle className="h-4 w-4 text-orange-500 mr-2" />
+                          <div>
+                            <div className="font-medium text-orange-600">Sin asignar</div>
+                            <div className="text-xs text-muted-foreground">Pendiente de locatario</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          <User className="h-4 w-4 text-green-500 mr-2" />
+                          <div>
+                            <div className="font-medium">{store.locatario_name}</div>
+                            {store.locatario_email && (
+                              <div className="text-sm text-muted-foreground">{store.locatario_email}</div>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </TableCell>

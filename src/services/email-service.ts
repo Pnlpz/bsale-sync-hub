@@ -1,11 +1,11 @@
 /**
- * Email Service
+ * Email Service - Clean Version
  * Handles email notifications for invitations and system events
  */
 
 import { InvitationEmailData } from '@/types/invitation';
 
-// Email templates
+// Email template
 const INVITATION_EMAIL_TEMPLATE = `
 <!DOCTYPE html>
 <html lang="es">
@@ -50,34 +50,36 @@ const INVITATION_EMAIL_TEMPLATE = `
         }
         .store-info {
             background-color: #f8fafc;
-            padding: 20px;
+            border: 1px solid #e2e8f0;
             border-radius: 6px;
+            padding: 20px;
             margin: 20px 0;
-            border-left: 4px solid #2563eb;
+        }
+        .store-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        .role-badge {
+            background-color: #dbeafe;
+            color: #1e40af;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+            display: inline-block;
         }
         .cta-button {
-            display: inline-block;
             background-color: #2563eb;
             color: white;
             padding: 12px 24px;
             text-decoration: none;
             border-radius: 6px;
-            font-weight: 600;
-            text-align: center;
-            margin: 20px 0;
-        }
-        .cta-button:hover {
-            background-color: #1d4ed8;
-        }
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            font-size: 14px;
-            color: #6b7280;
+            font-weight: 500;
+            display: inline-block;
             text-align: center;
         }
-        .expiry-notice {
+        .warning {
             background-color: #fef3c7;
             border: 1px solid #f59e0b;
             border-radius: 6px;
@@ -85,54 +87,48 @@ const INVITATION_EMAIL_TEMPLATE = `
             margin: 20px 0;
             color: #92400e;
         }
-        .role-badge {
-            display: inline-block;
-            background-color: #dbeafe;
-            color: #1e40af;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">🔄 Bsale Sync Hub</div>
+            <div class="logo">Bsale Sync Hub</div>
             <h1 class="title">¡Has sido invitado a unirte!</h1>
         </div>
         
         <div class="content">
-            <p>Hola,</p>
-            
             <p><strong>{{inviter_name}}</strong> te ha invitado a unirte como <span class="role-badge">{{role}}</span> en:</p>
             
             <div class="store-info">
-                <h3 style="margin: 0 0 10px 0; color: #1f2937;">{{store_name}}</h3>
-                <p style="margin: 0; color: #6b7280;">Tendrás acceso a gestionar productos, ventas y sincronización con Bsale.</p>
+                <div class="store-name">{{store_name}}</div>
+                <p>Tendrás acceso a gestionar productos, ventas y sincronización con Bsale.</p>
             </div>
             
             <p>Para aceptar esta invitación y crear tu cuenta, haz clic en el siguiente botón:</p>
-            
-            <div style="text-align: center;">
-                <a href="{{invitation_url}}" class="cta-button">Aceptar Invitación</a>
-            </div>
-            
-            <div class="expiry-notice">
-                <strong>⏰ Importante:</strong> Esta invitación expira el {{expires_at}}. Asegúrate de aceptarla antes de esa fecha.
-            </div>
-            
-            <p>Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:</p>
-            <p style="word-break: break-all; color: #2563eb;">{{invitation_url}}</p>
-            
-            <p>Si no esperabas esta invitación, puedes ignorar este correo de forma segura.</p>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{invitation_url}}" class="cta-button">Aceptar Invitación</a>
+        </div>
+        
+        <div class="warning">
+            <strong>⏰ Importante:</strong> Esta invitación expira el {{expires_at}}
         </div>
         
         <div class="footer">
-            <p>Este correo fue enviado desde Bsale Sync Hub</p>
-            <p>Sistema de gestión y sincronización para tiendas Bsale</p>
+            <p>Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:</p>
+            <p style="word-break: break-all; background-color: #f1f5f9; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                {{invitation_url}}
+            </p>
+            <p>Si no esperabas esta invitación, puedes ignorar este correo.</p>
         </div>
     </div>
 </body>
@@ -164,48 +160,22 @@ export class EmailService {
         .replace(/{{invitation_url}}/g, data.invitation_url)
         .replace(/{{expires_at}}/g, expiryDate);
 
-      // In a real implementation, you would integrate with an email service like:
-      // - Supabase Edge Functions with Resend
-      // - SendGrid
-      // - AWS SES
-      // - Mailgun
-      // etc.
-
-      // For now, we'll use a mock implementation that logs the email
-      // and shows a browser notification (for development/demo purposes)
-      
-      console.log('📧 Sending invitation email:', {
+      // For development, use enhanced fallback with detailed instructions
+      console.log('📧 Email content for manual sending:', {
         to: data.to,
         subject: `Invitación a ${data.store_name} - Bsale Sync Hub`,
         content: emailContent,
       });
 
-      // Simulate email sending delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // In development, show browser notification
+      // Show fallback notification
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Email enviado', {
-          body: `Invitación enviada a ${data.to}`,
+        new Notification('Email preparado (envío manual requerido)', {
+          body: `Revisa la consola para enviar manualmente a ${data.to}`,
           icon: '/favicon.ico',
         });
       }
 
-      // TODO: Replace with actual email service integration
-      // Example with Supabase Edge Function:
-      /*
-      const { error } = await supabase.functions.invoke('send-invitation-email', {
-        body: {
-          to: data.to,
-          subject: `Invitación a ${data.store_name} - Bsale Sync Hub`,
-          html: emailContent,
-        },
-      });
-
-      if (error) {
-        throw new Error(`Failed to send email: ${error.message}`);
-      }
-      */
+      console.log('📋 Manual email sending required. Check console for email content.');
 
     } catch (error) {
       console.error('Failed to send invitation email:', error);
@@ -221,199 +191,53 @@ export class EmailService {
   }
 
   /**
-   * Send welcome email after invitation acceptance
-   */
-  static async sendWelcomeEmail(email: string, storeName: string, role: string): Promise<void> {
-    try {
-      const welcomeContent = `
-        <h2>¡Bienvenido a ${storeName}!</h2>
-        <p>Tu cuenta ha sido creada exitosamente como ${this.getRoleDisplayName(role)}.</p>
-        <p>Ya puedes acceder al sistema y comenzar a gestionar productos y ventas.</p>
-        <a href="${this.BASE_URL}/login">Iniciar Sesión</a>
-      `;
-
-      console.log('📧 Sending welcome email:', {
-        to: email,
-        subject: `¡Bienvenido a ${storeName}!`,
-        content: welcomeContent,
-      });
-
-      // Simulate email sending
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-    } catch (error) {
-      console.error('Failed to send welcome email:', error);
-      // Don't throw error for welcome email failures
-    }
-  }
-
-  /**
-   * Send invitation reminder email
-   */
-  static async sendInvitationReminder(data: InvitationEmailData): Promise<void> {
-    try {
-      const reminderData = {
-        ...data,
-        subject: `Recordatorio: Invitación a ${data.store_name}`,
-      };
-
-      // Add reminder text to the template
-      const reminderContent = INVITATION_EMAIL_TEMPLATE
-        .replace('¡Has sido invitado a unirte!', '🔔 Recordatorio: ¡Has sido invitado a unirte!')
-        .replace('te ha invitado a unirte', 'te había invitado a unirte')
-        .replace('Para aceptar esta invitación', 'Aún tienes tiempo para aceptar esta invitación');
-
-      console.log('📧 Sending invitation reminder:', {
-        to: data.to,
-        subject: reminderData.subject,
-        content: reminderContent,
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-    } catch (error) {
-      console.error('Failed to send invitation reminder:', error);
-      throw new Error('No se pudo enviar el recordatorio de invitación');
-    }
-  }
-
-  /**
-   * Request notification permission
-   */
-  static async requestNotificationPermission(): Promise<boolean> {
-    if (!('Notification' in window)) {
-      return false;
-    }
-
-    if (Notification.permission === 'granted') {
-      return true;
-    }
-
-    if (Notification.permission === 'denied') {
-      return false;
-    }
-
-    const permission = await Notification.requestPermission();
-    return permission === 'granted';
-  }
-
-  /**
-   * Get display name for user role
+   * Get role display name in Spanish
    */
   private static getRoleDisplayName(role: string): string {
-    const roleNames = {
-      proveedor: 'Proveedor',
-      locatario: 'Locatario',
-      admin: 'Administrador',
+    const roleNames: Record<string, string> = {
+      'locatario': 'Locatario',
+      'proveedor': 'Proveedor',
+      'admin': 'Administrador',
     };
-    return roleNames[role as keyof typeof roleNames] || role;
+    return roleNames[role] || role;
   }
 
   /**
-   * Validate email address
+   * Check email configuration
    */
-  static isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  static checkEmailConfig(): void {
+    console.log('🔧 Email Configuration:');
+    console.log('Mode: Manual fallback (development)');
+    console.log('Template: HTML ready for manual sending');
+    console.log('Status: ✅ Ready for manual email sending');
   }
 
   /**
-   * Send system notification email
+   * Test email preparation
    */
-  static async sendSystemNotification(
-    email: string,
-    subject: string,
-    message: string
-  ): Promise<void> {
+  static async testEmailPreparation(testEmail: string): Promise<void> {
     try {
-      console.log('📧 Sending system notification:', {
-        to: email,
-        subject,
-        message,
-      });
+      console.log('🧪 Testing email preparation for:', testEmail);
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const testData: InvitationEmailData = {
+        to: testEmail,
+        inviter_name: 'Sistema de Prueba',
+        store_name: 'Tienda de Prueba',
+        role: 'locatario',
+        invitation_url: `${window.location.origin}/auth/register?token=test-token-123`,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      await this.sendInvitationEmail(testData);
+      console.log('✅ Test email content prepared. Check console for HTML content.');
 
     } catch (error) {
-      console.error('Failed to send system notification:', error);
-      // Don't throw error for system notifications
+      console.error('❌ Test email preparation failed:', error);
     }
   }
+}
 
-  /**
-   * Send welcome email to new locatario with login credentials
-   */
-  static async sendLocatarioWelcomeEmail(params: {
-    to: string;
-    locatario_name: string;
-    store_name: string;
-    login_url: string;
-    temp_password: string;
-    admin_contact: string;
-  }): Promise<void> {
-    console.log('📧 Sending locatario welcome email:', {
-      to: params.to,
-      locatario_name: params.locatario_name,
-      store_name: params.store_name,
-      login_url: params.login_url,
-    });
-
-    try {
-      const welcomeContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #2563eb;">¡Bienvenido a Bsale Sync Hub!</h2>
-          <p>¡Hola <strong>${params.locatario_name}</strong>!</p>
-
-          <p>Tu tienda "<strong>${params.store_name}</strong>" ha sido creada exitosamente en Bsale Sync Hub.</p>
-
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #2563eb;">
-            <h3 style="margin-top: 0; color: #1f2937;">Credenciales de Acceso</h3>
-            <p><strong>Email:</strong> ${params.to}</p>
-            <p><strong>Contraseña temporal:</strong> <code style="background-color: #e5e7eb; padding: 2px 4px; border-radius: 3px;">${params.temp_password}</code></p>
-          </div>
-
-          <div style="margin: 30px 0;">
-            <a href="${params.login_url}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-              Iniciar Sesión Ahora
-            </a>
-          </div>
-
-          <div style="background-color: #f0f9ff; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #0ea5e9;">
-            <h3 style="margin-top: 0; color: #0c4a6e;">✅ Tu tienda está completamente configurada</h3>
-            <p style="margin-bottom: 0;">La integración con Bsale ya está configurada por el administrador. Puedes comenzar a usar todas las funcionalidades inmediatamente.</p>
-          </div>
-
-          <h3>Próximos Pasos:</h3>
-          <ol>
-            <li>Inicia sesión con las credenciales proporcionadas</li>
-            <li>Cambia tu contraseña temporal por una segura</li>
-            <li>Explora el panel de control de tu tienda</li>
-            <li>Invita proveedores a tu tienda</li>
-            <li>Comienza a gestionar tu inventario y ventas</li>
-          </ol>
-
-          <div style="background-color: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 6px; margin: 20px 0;">
-            <p style="margin: 0;"><strong>Importante:</strong> Por seguridad, cambia tu contraseña temporal después del primer inicio de sesión.</p>
-          </div>
-
-          <p>Si tienes alguna pregunta o necesitas ayuda, no dudes en contactarnos en <a href="mailto:${params.admin_contact}">${params.admin_contact}</a></p>
-
-          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; text-align: center;">
-            <p>¡Esperamos que tengas una excelente experiencia con Bsale Sync Hub!</p>
-            <p>El equipo de Bsale Sync Hub</p>
-          </div>
-        </div>
-      `;
-
-      // Mock email sending - replace with real email service
-      console.log(`📧 LOCATARIO WELCOME EMAIL SENT TO: ${params.to}`);
-
-      // Simulate email sending delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-    } catch (error) {
-      console.error('Failed to send locatario welcome email:', error);
-      throw new Error('No se pudo enviar el correo de bienvenida');
-    }
-  }
+// Make EmailService available globally for console testing
+if (typeof window !== 'undefined') {
+  (window as any).EmailService = EmailService;
 }

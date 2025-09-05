@@ -19,10 +19,9 @@ const Sidebar = () => {
 
   const getMenuItems = () => {
     if (profile?.role === 'admin') {
-      // Admin menu - no Dashboard or Inventory, focused on administration
+      // Admin menu - focused on administration only
       return [
         { icon: Shield, label: 'Panel Admin', path: '/admin' },
-        { icon: ShoppingCart, label: 'Ventas', path: '/sales' },
         { icon: Users, label: 'Usuarios', path: '/users' },
         { icon: Store, label: 'Tiendas', path: '/stores' },
         { icon: Settings, label: 'Configuración', path: '/settings' },

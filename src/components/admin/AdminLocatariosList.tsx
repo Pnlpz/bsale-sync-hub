@@ -80,7 +80,7 @@ export const AdminLocatariosList = ({ locatarios, onRefresh }: AdminLocatariosLi
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Locatarios</CardTitle>
@@ -88,6 +88,9 @@ export const AdminLocatariosList = ({ locatarios, onRefresh }: AdminLocatariosLi
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{locatarios?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Locatarios registrados
+            </p>
           </CardContent>
         </Card>
 
@@ -100,30 +103,24 @@ export const AdminLocatariosList = ({ locatarios, onRefresh }: AdminLocatariosLi
             <div className="text-2xl font-bold">
               {locatarios?.reduce((sum, l) => sum + l.proveedores_count, 0) || 0}
             </div>
+            <p className="text-xs text-muted-foreground">
+              Proveedores asociados
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ventas Totales</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Productos Totales</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {locatarios?.reduce((sum, l) => sum + l.total_sales, 0) || 0}
+              {locatarios?.reduce((sum, l) => sum + l.products_count, 0) || 0}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(locatarios?.reduce((sum, l) => sum + l.total_revenue, 0) || 0)}
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Productos en catálogo
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -144,8 +141,6 @@ export const AdminLocatariosList = ({ locatarios, onRefresh }: AdminLocatariosLi
                 <TableHead>Tienda</TableHead>
                 <TableHead>Proveedores</TableHead>
                 <TableHead>Productos</TableHead>
-                <TableHead>Ventas</TableHead>
-                <TableHead>Ingresos</TableHead>
                 <TableHead>Fecha Registro</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
@@ -174,17 +169,6 @@ export const AdminLocatariosList = ({ locatarios, onRefresh }: AdminLocatariosLi
                     <Badge variant="outline">
                       {locatario.products_count} productos
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <ShoppingCart className="h-4 w-4 mr-2 text-muted-foreground" />
-                      {locatario.total_sales}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">
-                      {formatCurrency(locatario.total_revenue)}
-                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center text-sm text-muted-foreground">
